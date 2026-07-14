@@ -1,58 +1,52 @@
-Here is a clean **README.md section format** for your ViralWatch project. You can directly add this to your GitHub README.
-
-```markdown
 # Incremental Data Update Pipeline
 
 ## Overview
 
-ViralWatch uses an incremental data update pipeline to continuously integrate the latest outbreak information from the INRB-UMIE/BDBV2026-Data repository.
+ViralWatch implements an **incremental data update pipeline** to continuously integrate new outbreak information from the **INRB-UMIE/BDBV2026-Data repository**.
 
-Instead of reprocessing the entire dataset every time new outbreak reports are released, the pipeline identifies only new or modified outbreak records, applies the existing cleaning rules, updates the processed dataset, refreshes the database, and generates updated risk predictions for the dashboard.
+Instead of reprocessing the complete outbreak dataset whenever new reports become available, the pipeline identifies only **new or modified records**, applies the existing data-cleaning rules, updates the processed dataset, refreshes the database, and generates new outbreak risk predictions.
 
-This approach enables ViralWatch to function as a near real-time early-warning system.
+This design enables ViralWatch to operate as a **near real-time viral haemorrhagic fever early-warning system**.
 
 ---
 
-## Data Update Workflow
+# Data Pipeline Architecture
 
-```
-
-INRB-UMIE Repository
-|
-| (automatic update check)
-↓
-New Raw Outbreak Data
-|
-| (detect new/changed records)
-↓
-Incremental Cleaning Pipeline
-|
-| (append + update)
-↓
-Existing Clean Dataset
-|
-↓
-SQLite Database
-|
-↓
-Machine Learning Models
-|
-↓
-FastAPI Service
-|
-↓
-Cross-Border Dashboard
-
+```text
+INRB-UMIE BDBV2026 Repository
+              |
+              | Automatic update check
+              ↓
+      New Raw Outbreak Data
+              |
+              | Detect new/changed records
+              ↓
+     Incremental Cleaning Pipeline
+              |
+              | Append + Update
+              ↓
+      Processed Clean Dataset
+              |
+              ↓
+        SQLite Database
+              |
+              ↓
+      Machine Learning Models
+              |
+              ↓
+        FastAPI Backend
+              |
+              ↓
+   Cross-Border Risk Dashboard
 ```
 
 ---
 
 # Data Organization
 
-The project maintains three data layers:
+ViralWatch maintains a structured data lifecycle with three main data layers:
 
-```
-
+```text
 data/
 │
 ├── external/
@@ -64,128 +58,129 @@ data/
 │       └── Newly downloaded outbreak updates
 │
 └── processed/
-└── outbreak_clean.csv
-└── Historical cleaned outbreak dataset
-
+    └── outbreak_clean.csv
+        └── Analysis-ready outbreak dataset
 ```
 
-### Data Layers Explanation
+## Data Layer Description
 
-| Layer | Purpose |
-|---|---|
-| `data/external/` | Original outbreak data from INRB-UMIE. This data is never modified. |
-| `data/raw/incoming/` | Temporary storage for newly downloaded updates. |
-| `data/processed/` | Clean, analysis-ready dataset used by ML models. |
+| Data Layer           | Purpose                                                                                            |
+| -------------------- | -------------------------------------------------------------------------------------------------- |
+| `data/external/`     | Stores the original outbreak dataset obtained from INRB-UMIE. This source data remains unchanged.  |
+| `data/raw/incoming/` | Temporary storage location for newly collected outbreak updates before processing.                 |
+| `data/processed/`    | Contains cleaned and validated data used by analytics, machine learning models, and the dashboard. |
 
 ---
 
-# Incremental Update Process
+# Incremental Update Workflow
 
-## 1. Track Previously Processed Data
+## 1. Identify Existing Processed Data
 
-The cleaned dataset stores historical outbreak records:
+The pipeline first loads the previously processed outbreak dataset:
 
-`data/processed/outbreak_clean.csv`
+```
+data/processed/outbreak_clean.csv
+```
 
 Example:
 
-| date | health_zone | confirmed | deaths |
-|---|---|---|---|
-|2026-07-13|Goma|100|20|
-|2026-07-13|Beni|50|10|
+| Date       | Health Zone | Confirmed Cases | Deaths |
+| ---------- | ----------- | --------------- | ------ |
+| 2026-07-13 | Goma        | 100             | 20     |
+| 2026-07-13 | Beni        | 50              | 10     |
 
-The pipeline identifies the latest processed date:
+The latest processed date is extracted:
 
+```text
+Last processed date:
+2026-07-13
 ```
 
-Last processed date: 2026-07-13
-
-````
+This date is used as the reference point for detecting new outbreak information.
 
 ---
 
-# 2. Fetch Latest INRB Data
+# 2. Retrieve Latest Outbreak Data
 
-The pipeline checks the INRB repository for updates:
+The pipeline checks the INRB repository for new updates.
 
 ```bash
 cd data/external/BDBV2026-Data
 
 git pull
-````
-
-If new outbreak reports are available:
-
-```
-Existing data:
-2026-07-13 report
-
-New data:
-2026-07-14 report
 ```
 
-The pipeline detects:
+Example:
+
+Previous dataset:
 
 ```
-New records found:
+2026-07-13 outbreak report
+```
+
+New dataset:
+
+```
+2026-07-14 outbreak report
+```
+
+Detected update:
+
+```
+New records available:
 2026-07-14
 ```
 
 ---
 
-# 3. Detect New or Changed Records
+# 3. Detect New or Modified Records
 
-The pipeline compares the new raw data with the existing cleaned dataset.
+The pipeline compares incoming data with the existing processed dataset.
 
-Example:
+Example implementation:
 
 ```python
 import pandas as pd
 
-
-old_data = pd.read_csv(
+existing_data = pd.read_csv(
     "data/processed/outbreak_clean.csv"
 )
 
-
-new_data = pd.read_csv(
+latest_data = pd.read_csv(
     "data/external/BDBV2026-Data/latest.csv"
 )
 
+last_date = existing_data["date"].max()
 
-last_date = old_data["date"].max()
-
-
-new_records = new_data[
-    new_data["date"] > last_date
+new_records = latest_data[
+    latest_data["date"] > last_date
 ]
-
 
 print(new_records)
 ```
 
 Output:
 
-```
-New records:
+```text
+New outbreak records:
 
-2026-07-14  Goma      120 cases
-2026-07-14  Beni       60 cases
+2026-07-14 | Goma  | 120 cases
+2026-07-14 | Beni  | 60 cases
 ```
 
 ---
 
 # 4. Apply Data Cleaning Rules
 
-The same cleaning process used during initial data preparation is applied to the new records.
+New outbreak records go through the same preprocessing pipeline used during initial dataset preparation.
 
 Cleaning operations include:
 
 * Standardizing health-zone names.
-* Converting dates.
-* Removing duplicates.
+* Converting date formats.
+* Removing duplicate records.
 * Handling missing values.
-* Correcting inconsistent formats.
+* Correcting inconsistent data formats.
 
 Example:
 
@@ -196,7 +191,6 @@ new_records["health_zone"] = (
     .str.lower()
 )
 
-
 new_records["date"] = pd.to_datetime(
     new_records["date"]
 )
@@ -204,39 +198,40 @@ new_records["date"] = pd.to_datetime(
 
 ---
 
-# 5. Merge Updated Records
+# 5. Update Processed Dataset
 
-New cleaned records are merged with the existing processed dataset.
+Cleaned records are merged with historical outbreak data.
 
 ```python
-updated_data = pd.concat(
+updated_dataset = pd.concat(
     [
-        old_data,
+        existing_data,
         new_records
     ]
 )
 
-
-updated_data = updated_data.drop_duplicates()
+updated_dataset = updated_dataset.drop_duplicates()
 ```
+
+Updated dataset:
 
 Before:
 
-```
-2026-07-13  Goma  100
-```
-
-After update:
-
-```
-2026-07-13  Goma  100
-2026-07-14  Goma  120
+```text
+2026-07-13 | Goma | 100 cases
 ```
 
-The updated dataset is saved:
+After:
+
+```text
+2026-07-13 | Goma | 100 cases
+2026-07-14 | Goma | 120 cases
+```
+
+The final dataset is saved:
 
 ```python
-updated_data.to_csv(
+updated_dataset.to_csv(
     "data/processed/outbreak_clean.csv",
     index=False
 )
@@ -244,59 +239,58 @@ updated_data.to_csv(
 
 ---
 
-# 6. Update Database
+# 6. Database Synchronization
 
-The processed dataset updates the ViralWatch database:
+After processing, the updated dataset refreshes the ViralWatch database.
 
-```
+```text
 Processed Dataset
         |
         ↓
-SQLite Database
+ SQLite Database
         |
         ↓
-FastAPI API
+ FastAPI Backend
         |
         ↓
-Dashboard
+ Dashboard
 ```
 
-The database contains:
+The database stores:
 
 * Health-zone information.
-* Daily case counts.
-* Engineered features.
+* Daily outbreak statistics.
+* Engineered epidemiological features.
 * Model predictions.
 * Risk scores.
 
 ---
 
-# 7. Refresh Machine Learning Predictions
+# 7. Machine Learning Prediction Update
 
-After new data is added:
+Whenever new outbreak data is available:
 
-1. Feature engineering runs again.
-2. Models generate new predictions.
-3. Risk scores are updated.
+1. Feature engineering is executed.
+2. Machine learning models process updated information.
+3. Risk predictions are regenerated.
+4. Dashboard indicators are refreshed.
 
-Example:
+Example output:
 
-```
-Health Zone        Risk Level
-
-Goma               High
-Rutshuru           High
-Beni               Medium
-Bukavu             Low
-```
+| Health Zone | Risk Level |
+| ----------- | ---------- |
+| Goma        | High       |
+| Rutshuru    | High       |
+| Beni        | Medium     |
+| Bukavu      | Low        |
 
 ---
 
-# 8. Automated Daily Updates
+# Automated Daily Update
 
-The pipeline can run automatically using Linux Cron.
+The update pipeline can run automatically using Linux Cron.
 
-Edit scheduled tasks:
+Edit scheduled jobs:
 
 ```bash
 crontab -e
@@ -308,27 +302,25 @@ Add:
 0 8 * * * /home/sitanu/viralwatch/scripts/update_pipeline.sh
 ```
 
-This runs every day at 08:00.
+This executes the update process every day at **08:00 AM**.
 
-The automated workflow:
+Automated workflow:
 
-```
-1. Pull latest INRB data
-2. Detect new outbreak records
-3. Clean new records
+```text
+1. Pull latest INRB outbreak data
+2. Detect new records
+3. Clean incoming data
 4. Update processed dataset
-5. Update SQLite database
-6. Generate new predictions
+5. Synchronize database
+6. Generate risk predictions
 7. Refresh dashboard
 ```
 
 ---
 
-# Live Demo Workflow
+# Live Demonstration
 
-During the final demonstration:
-
-Run:
+For the final demonstration, run:
 
 ```bash
 ./scripts/update_pipeline.sh
@@ -336,33 +328,39 @@ Run:
 
 Expected output:
 
-```
-✓ Checking INRB updates
+```text
+✓ Checking INRB repository updates
 ✓ New outbreak records detected
-✓ Cleaning completed
+✓ Data cleaning completed
 ✓ Processed dataset updated
-✓ Database refreshed
+✓ Database synchronized
 ✓ Risk predictions generated
-✓ Dashboard updated
+✓ Dashboard refreshed
 ```
 
-The dashboard then displays the latest cross-border outbreak risk information for:
+The dashboard displays updated cross-border outbreak risk information covering:
 
 * North Kivu health zones
 * South Kivu health zones
-* Areas bordering Rwanda
+* Border regions connected to Rwanda
 
 ---
 
-## Benefits of Incremental Updating
+# Benefits of Incremental Updating
 
-* Avoids unnecessary full dataset processing.
-* Supports daily outbreak surveillance.
-* Handles continuously changing epidemiological data.
-* Keeps ML predictions current.
-* Enables real-time dashboard updates.
+The incremental pipeline provides:
 
-```
+✅ Faster data processing compared with full dataset rebuilding
+✅ Continuous outbreak surveillance capability
+✅ Reliable handling of changing epidemiological information
+✅ Updated machine learning predictions
+✅ Near real-time dashboard monitoring
+✅ Scalable architecture for future outbreak sources
 
-This section fits well under **"Data Pipeline Architecture"** in your ViralWatch README.
-```
+---
+
+## Summary
+
+The ViralWatch incremental update pipeline creates a reliable bridge between outbreak data collection, machine learning prediction, and public-health decision support.
+
+By continuously integrating new information while preserving historical records, ViralWatch provides an efficient foundation for early detection and cross-border viral haemorrhagic fever monitoring.
