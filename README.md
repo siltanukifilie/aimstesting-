@@ -1,3 +1,23 @@
+Which folders should ViralWatch use?
+
+Looking at your project requirements, I would prioritize these folders.
+
+Folder	Use for ViralWatch	Priority
+✅ insp_sitrep	Daily outbreak data (cases, deaths, contacts, hospitalizations)	⭐⭐⭐⭐⭐
+✅ epi	Weekly WHO epidemiological reports	⭐⭐⭐⭐
+✅ worldpop	Population count and density	⭐⭐⭐⭐⭐
+✅ osrm	Road distance and travel time	⭐⭐⭐⭐⭐
+✅ shapefiles	Health zone boundaries (map)	⭐⭐⭐⭐⭐
+✅ cross-border-movements	Border crossing information	⭐⭐⭐⭐
+✅ flowminder	Human mobility	⭐⭐⭐⭐
+✅ testing_capacity	PCR machines and testing capacity	⭐⭐⭐
+✅ grid3_healthsites	Health facility locations	⭐⭐⭐⭐
+✅ healthsites_io	Additional health facilities	⭐⭐⭐
+✅ public_health_response	Government response indicators	⭐⭐⭐
+✅ refugee_sites	Refugee camp locations	⭐⭐
+
+
+
 # Incremental Data Update Pipeline
 
 ## Overview
